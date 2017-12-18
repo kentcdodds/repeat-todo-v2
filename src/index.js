@@ -40,7 +40,7 @@ const IconButton = glamorous.button({
     width: 0,
     top: 0,
     left: '50%',
-    transform: 'translate(-50%, 10px)',
+    transform: 'translate(-3px, 11px)',
     zIndex: -1,
     position: 'absolute',
     content: '""',
