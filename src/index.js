@@ -91,7 +91,16 @@ const CenteredBox = glamorous(Box)(
 )
 const CenteredRow = glamorous(Row)({justifyContent: 'center'}, center)
 
-function App({lists, selectedList}) {
+function App({
+  lists,
+  selectedList,
+  onCreateItem,
+  onCreateList,
+  onDeleteItem,
+  onDeleteList,
+  onCompleteItem,
+  onListChange,
+}) {
   return (
     <div>
       <div style={{textAlign: 'center', marginTop: 30}}>
@@ -99,25 +108,64 @@ function App({lists, selectedList}) {
       </div>
       <CenteredBox maxWidth={400}>
         <CenteredRow>
-          <select value={selectedList.id} style={{flex: 1}}>
+          <select
+            value={selectedList.id}
+            onChange={e => onListChange(e.target.value)}
+            style={{flex: 1}}
+          >
             {lists.map(l => (
               <option key={l.id} value={l.id}>
                 {l.name}
               </option>
             ))}
           </select>
-          <SuccessButton css={{marginLeft: 20}}>Create List</SuccessButton>
+          <SuccessButton
+            css={{marginLeft: 20}}
+            onClick={() => {
+              const result = prompt(
+                'Hi friend! 👋 So, what is the name of your new list?',
+              )
+              if (result) {
+                onCreateList(result)
+              }
+            }}
+          >
+            Create List
+          </SuccessButton>
         </CenteredRow>
         <hr style={{width: '100%'}} />
         <div style={{width: '100%'}}>
           <CenteredRow css={{justifyContent: 'flex-start'}}>
             <h2 style={{flex: 1}}>Fun List</h2>
-            <DangerButton>Delete List</DangerButton>
+            <DangerButton
+              onClick={() => {
+                if (
+                  confirm(
+                    '🔥 Uh oh... Are you sure you want to delete this list? 🔥',
+                  )
+                ) {
+                  onDeleteList(selectedList)
+                }
+              }}
+            >
+              Delete List
+            </DangerButton>
           </CenteredRow>
-          <CenteredRow>
-            <input type="text" style={{flex: 1}} />
-            <Button css={{marginLeft: 20}}>Add</Button>
-          </CenteredRow>
+          <form
+            onSubmit={e => {
+              e.preventDefault()
+              const input = e.target.elements.value
+              onCreateItem(input.value)
+              input.value = ''
+            }}
+          >
+            <CenteredRow>
+              <input type="text" name="value" style={{flex: 1}} />
+              <Button type="submit" css={{marginLeft: 20}}>
+                Add
+              </Button>
+            </CenteredRow>
+          </form>
           <div>
             {selectedList.list.map(li => (
               <Row
@@ -131,8 +179,8 @@ function App({lists, selectedList}) {
               >
                 <IconButton>✋</IconButton>
                 <div style={{flex: 1}}>{li.value}</div>
-                <IconButton>✅</IconButton>
-                <IconButton>❌</IconButton>
+                <IconButton onClick={() => onCompleteItem(li)}>✅</IconButton>
+                <IconButton onClick={() => onDeleteItem(li)}>❌</IconButton>
               </Row>
             ))}
           </div>
@@ -159,7 +207,78 @@ const lists = [
   },
 ]
 
+class AppState extends React.Component {
+  state = {
+    lists,
+    selectedList: lists[0],
+  }
+  handleCreateList = name => {
+    this.setState(({lists}) => {
+      const newList = {
+        id: name.toLowerCase(),
+        name,
+        list: [],
+      }
+      return {
+        lists: [...lists, newList],
+        selectedList: newList,
+      }
+    })
+  }
+  handleDeleteList = list => {
+    this.setState(({lists}) => {
+      const newLists = lists.filter(l => l.id !== list.id)
+      return {
+        lists: newLists,
+        selectedList: newLists[0],
+      }
+    })
+  }
+  handleCreateItem = value => {
+    this.setState(({selectedList}) => ({
+      selectedList: {
+        ...selectedList,
+        list: [...selectedList.list, {id: value.toLowerCase(), value}],
+      },
+    }))
+  }
+  handleDeleteItem = item => {
+    this.setState(({selectedList}) => ({
+      selectedList: {
+        ...selectedList,
+        list: selectedList.list.filter(i => i.id !== item.id),
+      },
+    }))
+  }
+  handleCompleteItem = item => {
+    this.setState(({selectedList}) => ({
+      selectedList: {
+        ...selectedList,
+        list: [...selectedList.list.filter(i => i.id !== item.id), item],
+      },
+    }))
+  }
+  handleListChange = listId => {
+    this.setState(({lists}) => ({
+      selectedList: lists.find(l => l.id === listId),
+    }))
+  }
+  render() {
+    return (
+      <App
+        {...this.state}
+        onCreateList={this.handleCreateList}
+        onDeleteList={this.handleDeleteList}
+        onCreateItem={this.handleCreateItem}
+        onDeleteItem={this.handleDeleteItem}
+        onCompleteItem={this.handleCompleteItem}
+        onListChange={this.handleListChange}
+      />
+    )
+  }
+}
+
 render(
-  <App lists={lists} selectedList={lists[0]} />,
+  <AppState lists={lists} selectedList={lists[0]} />,
   document.getElementById('root'),
 )
