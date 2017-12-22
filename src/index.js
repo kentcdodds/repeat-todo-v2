@@ -2,7 +2,9 @@ import 'milligram'
 import React from 'react'
 import {render} from 'react-dom'
 import glamorous from 'glamorous'
-import {DragDropContext, Draggable, Droppable} from 'react-beautiful-dnd'
+import firebase from './firebase'
+
+console.log(firebase.auth())
 
 const Button = glamorous.button({
   transition: 'all .1s',
@@ -102,90 +104,109 @@ function App({
   onListChange,
 }) {
   return (
-    <div>
-      <div style={{textAlign: 'center', marginTop: 30}}>
-        <h1>Repeat todo</h1>
-      </div>
-      <CenteredBox maxWidth={400}>
-        <CenteredRow>
-          <select
-            value={selectedList.id}
-            onChange={e => onListChange(e.target.value)}
-            style={{flex: 1}}
-          >
-            {lists.map(l => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-          <SuccessButton
-            css={{marginLeft: 20}}
-            onClick={() => {
-              const result = prompt(
-                'Hi friend! 👋 So, what is the name of your new list?',
-              )
-              if (result) {
-                onCreateList(result)
-              }
-            }}
-          >
-            Create List
-          </SuccessButton>
-        </CenteredRow>
-        <hr style={{width: '100%'}} />
-        <div style={{width: '100%'}}>
-          <CenteredRow css={{justifyContent: 'flex-start'}}>
-            <h2 style={{flex: 1}}>Fun List</h2>
-            <DangerButton
-              onClick={() => {
-                if (
-                  confirm(
-                    '🔥 Uh oh... Are you sure you want to delete this list? 🔥',
-                  )
-                ) {
-                  onDeleteList(selectedList)
-                }
-              }}
-            >
-              Delete List
-            </DangerButton>
-          </CenteredRow>
-          <form
-            onSubmit={e => {
-              e.preventDefault()
-              const input = e.target.elements.value
-              onCreateItem(input.value)
-              input.value = ''
-            }}
-          >
-            <CenteredRow>
-              <input type="text" name="value" style={{flex: 1}} />
-              <Button type="submit" css={{marginLeft: 20}}>
-                Add
-              </Button>
-            </CenteredRow>
-          </form>
-          <div>
-            {selectedList.list.map(li => (
-              <Row
-                gap={30}
-                key={li.id}
-                css={{
-                  marginBottom: 30,
-                  justifyContent: 'center',
-                  alignItems: 'center',
+    <div style={{width: '100%'}}>
+      <CenteredRow>
+        <select
+          value={selectedList ? selectedList.id : null}
+          onChange={e => onListChange(e.target.value)}
+          style={{flex: 1}}
+        >
+          {lists.map(l => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+        <SuccessButton
+          css={{marginLeft: 20}}
+          onClick={() => {
+            const result = prompt(
+              'Hi friend! 👋 So, what is the name of your new list?',
+            )
+            if (result) {
+              onCreateList(result)
+            }
+          }}
+        >
+          Create List
+        </SuccessButton>
+      </CenteredRow>
+      {selectedList ? (
+        <React.Fragment>
+          <hr style={{width: '100%'}} />
+          <div style={{width: '100%'}}>
+            <CenteredRow css={{justifyContent: 'flex-start'}}>
+              <h2 style={{flex: 1}}>{selectedList.name}</h2>
+              <DangerButton
+                onClick={() => {
+                  if (
+                    confirm(
+                      '🔥 Uh oh... Are you sure you want to delete this list? 🔥',
+                    )
+                  ) {
+                    onDeleteList(selectedList)
+                  }
                 }}
               >
-                <IconButton>✋</IconButton>
-                <div style={{flex: 1}}>{li.value}</div>
-                <IconButton onClick={() => onCompleteItem(li)}>✅</IconButton>
-                <IconButton onClick={() => onDeleteItem(li)}>❌</IconButton>
-              </Row>
-            ))}
+                Delete List
+              </DangerButton>
+            </CenteredRow>
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                const input = e.target.elements.value
+                onCreateItem(input.value)
+                input.value = ''
+              }}
+            >
+              <CenteredRow>
+                <input type="text" name="value" style={{flex: 1}} />
+                <Button type="submit" css={{marginLeft: 20}}>
+                  Add
+                </Button>
+              </CenteredRow>
+            </form>
+            <div>
+              {selectedList.list.map(li => (
+                <Row
+                  gap={30}
+                  key={li.id}
+                  css={{
+                    marginBottom: 30,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <IconButton>✋</IconButton>
+                  <div style={{flex: 1}}>{li.value}</div>
+                  <IconButton
+                    onClick={e => {
+                      e.target.blur()
+                      onCompleteItem(li)
+                    }}
+                  >
+                    ✅
+                  </IconButton>
+                  <IconButton
+                    onClick={e => {
+                      e.target.blur()
+                      if (
+                        confirm(
+                          '🚨 Hey! Are you sure you wanna delete that TODO? 🚨',
+                        )
+                      ) {
+                        onDeleteItem(li)
+                      }
+                    }}
+                  >
+                    ❌
+                  </IconButton>
+                </Row>
+              ))}
+            </div>
           </div>
-        </div>
-      </CenteredBox>
+        </React.Fragment>
+      ) : null}
     </div>
   )
 }
@@ -206,6 +227,80 @@ const lists = [
     ],
   },
 ]
+
+class Login extends React.Component {
+  state = {user: null, error: null}
+  auth = firebase.auth()
+  login = ({email, password}) => {
+    this.auth.signInWithEmailAndPassword(email, password).catch(error => {
+      this.setState({error: error.message})
+    })
+  }
+  signup = ({email, password}) => {
+    this.auth.createUserWithEmailAndPassword(email, password).catch(error => {
+      this.setState({error: error.message})
+    })
+  }
+  logout = () => {
+    this.auth.signOut()
+  }
+  componentDidMount() {
+    this.unsubscribe = this.auth.onAuthStateChanged(user => {
+      this.setState({user})
+      console.log({user})
+    })
+  }
+  componentWillUnmount() {
+    this.unsubscribe && this.unsubscribe()
+  }
+  render() {
+    return this.props.render({
+      ...this.state,
+      login: this.login,
+      signup: this.signup,
+      logout: this.logout,
+    })
+  }
+}
+
+class LoginForm extends React.Component {
+  handleSignup = () => {
+    this.props.signup({
+      email: this.form.elements.email.value,
+      password: this.form.elements.password.value,
+    })
+  }
+  handleLogin = () => {
+    this.props.login({
+      email: this.form.elements.email.value,
+      password: this.form.elements.password.value,
+    })
+  }
+  render() {
+    return (
+      <form
+        onSubmit={e => {
+          e.preventDefault()
+          this.handleLogin()
+        }}
+        ref={n => (this.form = n)}
+      >
+        <CenteredRow gap={20}>
+          <label>
+            Email: <input type="email" name="email" />
+          </label>
+          <label>
+            Password: <input type="password" name="password" />
+          </label>
+        </CenteredRow>
+        <CenteredRow css={{justifyContent: 'space-between'}}>
+          <Button type="submit">Sign In</Button>
+          <SuccessButton onClick={this.handleSignup}>Sign Up</SuccessButton>
+        </CenteredRow>
+      </form>
+    )
+  }
+}
 
 class AppState extends React.Component {
   state = {
@@ -265,14 +360,37 @@ class AppState extends React.Component {
   }
   render() {
     return (
-      <App
-        {...this.state}
-        onCreateList={this.handleCreateList}
-        onDeleteList={this.handleDeleteList}
-        onCreateItem={this.handleCreateItem}
-        onDeleteItem={this.handleDeleteItem}
-        onCompleteItem={this.handleCompleteItem}
-        onListChange={this.handleListChange}
+      <Login
+        render={({user, login, signup, error, logout}) => (
+          <div>
+            <div style={{textAlign: 'center', marginTop: 30}}>
+              <h1>Repeat todo</h1>
+            </div>
+            {user ? (
+              <div>
+                <Button onClick={logout}>Logout</Button>
+              </div>
+            ) : null}
+            <CenteredBox
+              css={{width: 400, marginLeft: 'auto', marginRight: 'auto'}}
+            >
+              {error ? <div>Error: {error}</div> : null}
+              {user ? (
+                <App
+                  {...this.state}
+                  onCreateList={this.handleCreateList}
+                  onDeleteList={this.handleDeleteList}
+                  onCreateItem={this.handleCreateItem}
+                  onDeleteItem={this.handleDeleteItem}
+                  onListChange={this.handleListChange}
+                  onCompleteItem={this.handleCompleteItem}
+                />
+              ) : (
+                <LoginForm login={login} signup={signup} />
+              )}
+            </CenteredBox>
+          </div>
+        )}
       />
     )
   }
