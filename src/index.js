@@ -347,3 +347,4 @@ function App() {
 }
 
 render(<App />, document.getElementById('root'))
+/* eslint no-restricted-globals: "off" */
