@@ -24,7 +24,6 @@ function Lists({
   onListChange,
 }) {
   const selectedList = lists[selectedListId]
-  console.log({selectedList, selectedListId})
   return (
     <div style={{width: '100%'}}>
       <CenteredRow>
@@ -159,7 +158,6 @@ class Login extends React.Component {
   componentDidMount() {
     this.unsubscribe = this.auth.onAuthStateChanged(user => {
       this.setState({user})
-      console.log({user})
     })
   }
   componentWillUnmount() {
