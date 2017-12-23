@@ -10,7 +10,8 @@
     "milligram": "1.3.0",
     "firebase": "4.8.1",
     "glamorous": "4.11.0",
-    "glamor": "2.20.40"
+    "glamor": "2.20.40",
+    "react-toastify": "3.2.1"
   },
   "devDependencies": {
     "react-scripts": "1.0.0"
