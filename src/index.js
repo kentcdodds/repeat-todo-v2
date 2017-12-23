@@ -169,7 +169,7 @@ class Login extends React.Component {
   }
   componentDidMount() {
     this.unsubscribe = this.auth.onAuthStateChanged(user => {
-      this.setState({user})
+      this.setState({user, error: null})
     })
   }
   componentWillUnmount() {
