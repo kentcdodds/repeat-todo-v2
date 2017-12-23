@@ -3,6 +3,7 @@ import React from 'react'
 import {render} from 'react-dom'
 import glamorous from 'glamorous'
 import {Motion, spring} from 'react-motion'
+import registerServiceWorker from './register-service-worker'
 import firebase from './firebase'
 import {
   Row,
@@ -13,6 +14,8 @@ import {
   SuccessButton,
   DangerButton,
 } from './components'
+
+registerServiceWorker()
 
 function Lists({
   lists,
