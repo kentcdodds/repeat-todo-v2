@@ -264,12 +264,11 @@ class FirebaseData extends React.Component {
     this.getRef(`/${listId}`).remove()
   }
   handleCreateItem = value => {
-    const newItemRef = this.getRef(`/${this.state.selectedListId}/items`).push()
-    const selectedList = this.state.lists[this.state.selectedListId]
-    newItemRef.set({
-      value,
-      order: selectedList.items ? Object.keys(selectedList.items).length : 0,
-    })
+    const {items} = this.state.lists[this.state.selectedListId]
+    const {key} = this.getRef(`/${this.state.selectedListId}/items`).push()
+    const newItem = {value, order: -2}
+    const newItems = reorderItems({...items, [key]: newItem}, newItem, -2)
+    this.getRef(`/${this.state.selectedListId}/items`).set(newItems)
   }
   handleDeleteItem = itemId => {
     const {items} = this.state.lists[this.state.selectedListId]
@@ -304,21 +303,34 @@ class FirebaseData extends React.Component {
 }
 
 function reorderItems(items, itemToMove, locationToMove) {
-  return Object.entries(items).reduce((all, [id, item]) => {
-    const order =
-      item === itemToMove
-        ? locationToMove
-        : itemToMove.order > item.order ? item.order : item.order - 1
-    if (order === undefined) {
-      // we're removing it
+  return Object.entries(items)
+    .reduce((all, [id, item]) => {
+      const order =
+        item === itemToMove
+          ? locationToMove
+          : itemToMove.order > item.order ? item.order : item.order - 1
+      if (order === undefined) {
+        // we're removing it
+        return all
+      }
+      all.push([
+        id,
+        {
+          ...item,
+          order,
+        },
+      ])
       return all
-    }
-    all[id] = {
-      ...item,
-      order,
-    }
-    return all
-  }, {})
+    }, [])
+    .sort(([, a], [, b]) => (a.order > b.order ? 1 : -1))
+    .reduce((all, [id, item], order) => {
+      all[id] = {
+        ...item,
+        order,
+      }
+      console.log({all})
+      return all
+    }, {})
 }
 
 function App() {
