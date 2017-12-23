@@ -3,99 +3,19 @@ import React from 'react'
 import {render} from 'react-dom'
 import glamorous from 'glamorous'
 import firebase from './firebase'
+import {
+  Row,
+  CenteredRow,
+  CenteredBox,
+  Button,
+  IconButton,
+  SuccessButton,
+  DangerButton,
+} from './components'
 
-console.log(firebase.auth())
-
-const Button = glamorous.button({
-  transition: 'all .1s',
-  ':hover': {
-    transition: 'all .2s',
-    backgroundColor: '#606c76',
-    borderColor: '#606c76',
-    color: '#fff',
-    outline: 0,
-  },
-})
-
-const SuccessButton = glamorous(Button)({
-  backgroundColor: '#3BB272',
-  borderColor: '#3BB272',
-})
-
-const DangerButton = glamorous(Button)({
-  backgroundColor: '#FFD07B',
-  borderColor: '#FFD07B',
-})
-
-const IconButton = glamorous.button({
-  backgroundColor: 'transparent',
-  border: 'none',
-  fontSize: '1.5em',
-  height: 'initial',
-  margin: 6,
-  padding: 0,
-  transition: 'all .1s',
-  lineHeight: 1,
-  position: 'relative',
-  '::before': {
-    height: 0,
-    width: 0,
-    top: 0,
-    left: '50%',
-    transform: 'translate(-3px, 11px)',
-    zIndex: -1,
-    position: 'absolute',
-    content: '""',
-    opacity: 0,
-    transition: 'all .2s',
-    backgroundColor: '#aaa',
-    boxShadow: '0px 0px 20px 12px #aaa',
-  },
-  '&:hover, &:active, &:focus': {
-    backgroundColor: 'transparent',
-    transform: 'scale(1.1)',
-    '::before': {
-      opacity: 1,
-    },
-  },
-  ':active': {
-    transform: 'scale(0.9)',
-  },
-})
-
-const gappable = ({gap}) =>
-  gap
-    ? {
-        '& > *:not(:first-child)': {
-          marginLeft: gap / 2,
-        },
-        '& > *:not(:last-child)': {
-          marginRight: gap / 2,
-        },
-      }
-    : null
-const Box = glamorous.div({display: 'flex', flexDirection: 'column'}, gappable)
-const Row = glamorous.div({display: 'flex', flexDirection: 'row'}, gappable)
-const center = ({maxWidth}) =>
-  maxWidth
-    ? {
-        maxWidth,
-        marginLeft: 'auto',
-        marginRight: 'auto',
-      }
-    : {width: '100%'}
-const CenteredBox = glamorous(Box)(
-  {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  center,
-)
-const CenteredRow = glamorous(Row)({justifyContent: 'center'}, center)
-
-function App({
+function Lists({
   lists,
-  selectedList,
+  selectedListId,
   onCreateItem,
   onCreateList,
   onDeleteItem,
@@ -103,19 +23,23 @@ function App({
   onCompleteItem,
   onListChange,
 }) {
+  const selectedList = lists[selectedListId]
+  console.log({selectedList, selectedListId})
   return (
     <div style={{width: '100%'}}>
       <CenteredRow>
         <select
-          value={selectedList ? selectedList.id : null}
+          value={selectedListId || undefined}
           onChange={e => onListChange(e.target.value)}
           style={{flex: 1}}
         >
-          {lists.map(l => (
-            <option key={l.id} value={l.id}>
-              {l.name}
-            </option>
-          ))}
+          {lists ? (
+            Object.entries(lists).map(([id, {name}]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))
+          ) : null}
         </select>
         <SuccessButton
           css={{marginLeft: 20}}
@@ -144,7 +68,7 @@ function App({
                       '🔥 Uh oh... Are you sure you want to delete this list? 🔥',
                     )
                   ) {
-                    onDeleteList(selectedList)
+                    onDeleteList(selectedListId)
                   }
                 }}
               >
@@ -167,42 +91,47 @@ function App({
               </CenteredRow>
             </form>
             <div>
-              {selectedList.list.map(li => (
-                <Row
-                  gap={30}
-                  key={li.id}
-                  css={{
-                    marginBottom: 30,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <IconButton>✋</IconButton>
-                  <div style={{flex: 1}}>{li.value}</div>
-                  <IconButton
-                    onClick={e => {
-                      e.target.blur()
-                      onCompleteItem(li)
-                    }}
-                  >
-                    ✅
-                  </IconButton>
-                  <IconButton
-                    onClick={e => {
-                      e.target.blur()
-                      if (
-                        confirm(
-                          '🚨 Hey! Are you sure you wanna delete that TODO? 🚨',
-                        )
-                      ) {
-                        onDeleteItem(li)
-                      }
-                    }}
-                  >
-                    ❌
-                  </IconButton>
-                </Row>
-              ))}
+              {selectedList && selectedList.items ? (
+                Object.entries(selectedList.items)
+                  .sort(([, a], [, b]) => (a.order > b.order ? 1 : -1))
+                  .map(([id, {value}]) => (
+                    <React.Fragment key={id}>
+                      <hr style={{margin: 8}} />
+                      <Row
+                        gap={30}
+                        css={{
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <IconButton>✋</IconButton>
+                        <div style={{flex: 1}}>{value}</div>
+                        <IconButton
+                          onClick={e => {
+                            e.target.blur()
+                            onCompleteItem(id)
+                          }}
+                        >
+                          ✅
+                        </IconButton>
+                        <IconButton
+                          onClick={e => {
+                            e.target.blur()
+                            if (
+                              confirm(
+                                '🚨 Hey! Are you sure you wanna delete that TODO? 🚨',
+                              )
+                            ) {
+                              onDeleteItem(id)
+                            }
+                          }}
+                        >
+                          ❌
+                        </IconButton>
+                      </Row>
+                    </React.Fragment>
+                  ))
+              ) : null}
             </div>
           </div>
         </React.Fragment>
@@ -210,23 +139,6 @@ function App({
     </div>
   )
 }
-
-const lists = [
-  {
-    id: 'blah',
-    name: 'Fun list',
-    list: [{id: 'a', value: 'thing 1'}, {id: 'b', value: 'thing 2'}],
-  },
-  {
-    id: 'blah2',
-    name: 'Fun list 2',
-    list: [
-      {id: 'c', value: 'fun 1'},
-      {id: 'd', value: 'fun 2'},
-      {id: 'e', value: 'fun 3'},
-    ],
-  },
-]
 
 class Login extends React.Component {
   state = {user: null, error: null}
@@ -302,101 +214,138 @@ class LoginForm extends React.Component {
   }
 }
 
-class AppState extends React.Component {
+class FirebaseData extends React.Component {
+  database = firebase.database()
   state = {
-    lists,
-    selectedList: lists[0],
+    lists: {},
+    selectedListId: null,
+  }
+  getRef(path = '') {
+    return this.database.ref(`lists/${this.props.user.uid}${path}`)
+  }
+  componentDidMount() {
+    this.unsubscribe = this.getRef().on('value', snapshot => {
+      const lists = snapshot ? snapshot.val() : null
+      const firstItemId = lists ? Object.keys(lists)[0] : null
+      this.setState(({selectedListId}) => ({
+        lists,
+        selectedListId: lists[selectedListId] ? selectedListId : firstItemId,
+      }))
+    })
+  }
+  componentWillUnmount() {
+    this.unsubscribe && this.unsubscribe()
   }
   handleCreateList = name => {
-    this.setState(({lists}) => {
-      const newList = {
-        id: name.toLowerCase(),
+    this.getRef()
+      .push()
+      .set({
         name,
-        list: [],
-      }
-      return {
-        lists: [...lists, newList],
-        selectedList: newList,
-      }
-    })
+        list: {},
+      })
   }
-  handleDeleteList = list => {
-    this.setState(({lists}) => {
-      const newLists = lists.filter(l => l.id !== list.id)
-      return {
-        lists: newLists,
-        selectedList: newLists[0],
-      }
-    })
+  handleDeleteList = listId => {
+    this.getRef(`/${listId}`).remove()
   }
   handleCreateItem = value => {
-    this.setState(({selectedList}) => ({
-      selectedList: {
-        ...selectedList,
-        list: [...selectedList.list, {id: value.toLowerCase(), value}],
-      },
-    }))
+    const newItemRef = this.getRef(`/${this.state.selectedListId}/items`).push()
+    const selectedList = this.state.lists[this.state.selectedListId]
+    newItemRef.set({
+      value,
+      order: selectedList.items ? Object.keys(selectedList.items).length : 0,
+    })
   }
-  handleDeleteItem = item => {
-    this.setState(({selectedList}) => ({
-      selectedList: {
-        ...selectedList,
-        list: selectedList.list.filter(i => i.id !== item.id),
-      },
-    }))
+  handleDeleteItem = itemId => {
+    const {items} = this.state.lists[this.state.selectedListId]
+    const itemToRemove = items[itemId]
+    const newItems = reorderItems(items, itemToRemove)
+    this.getRef(`/${this.state.selectedListId}/items`).set(newItems)
   }
-  handleCompleteItem = item => {
-    this.setState(({selectedList}) => ({
-      selectedList: {
-        ...selectedList,
-        list: [...selectedList.list.filter(i => i.id !== item.id), item],
-      },
-    }))
+  handleCompleteItem = itemId => {
+    const {items} = this.state.lists[this.state.selectedListId]
+    const completeItem = items[itemId]
+    const newItems = reorderItems(
+      items,
+      completeItem,
+      Object.keys(items).length - 1,
+    )
+    this.getRef(`/${this.state.selectedListId}/items`).set(newItems)
   }
   handleListChange = listId => {
-    this.setState(({lists}) => ({
-      selectedList: lists.find(l => l.id === listId),
-    }))
+    this.setState({selectedListId: listId})
   }
   render() {
-    return (
-      <Login
-        render={({user, login, signup, error, logout}) => (
-          <div>
-            <div style={{textAlign: 'center', marginTop: 30}}>
-              <h1>Repeat todo</h1>
-            </div>
-            {user ? (
-              <div>
-                <Button onClick={logout}>Logout</Button>
-              </div>
-            ) : null}
-            <CenteredBox
-              css={{width: 400, marginLeft: 'auto', marginRight: 'auto'}}
-            >
-              {error ? <div>Error: {error}</div> : null}
-              {user ? (
-                <App
-                  {...this.state}
-                  onCreateList={this.handleCreateList}
-                  onDeleteList={this.handleDeleteList}
-                  onCreateItem={this.handleCreateItem}
-                  onDeleteItem={this.handleDeleteItem}
-                  onListChange={this.handleListChange}
-                  onCompleteItem={this.handleCompleteItem}
-                />
-              ) : (
-                <LoginForm login={login} signup={signup} />
-              )}
-            </CenteredBox>
-          </div>
-        )}
-      />
-    )
+    return this.props.render({
+      ...this.state,
+      onCreateList: this.handleCreateList,
+      onDeleteList: this.handleDeleteList,
+      onCreateItem: this.handleCreateItem,
+      onDeleteItem: this.handleDeleteItem,
+      onListChange: this.handleListChange,
+      onCompleteItem: this.handleCompleteItem,
+    })
   }
 }
 
-render(
-  <AppState lists={lists} selectedList={lists[0]} />,
-  document.getElementById('root'),
-)
+function reorderItems(items, itemToMove, locationToMove) {
+  return Object.entries(items).reduce((all, [id, item]) => {
+    const order =
+      item === itemToMove
+        ? locationToMove
+        : itemToMove.order > item.order ? item.order : item.order - 1
+    if (order === undefined) {
+      // we're removing it
+      return all
+    }
+    all[id] = {
+      ...item,
+      order,
+    }
+    return all
+  }, {})
+}
+
+function App() {
+  return (
+    <Login
+      render={({user, login, signup, error, logout}) => (
+        <div>
+          <CenteredRow
+            gap={10}
+            css={{
+              textAlign: 'center',
+              marginTop: 30,
+              marginBottom: 30,
+              alignItems: 'center',
+            }}
+          >
+            <h1 style={{marginBottom: 0}}>Repeat todo</h1>
+            {user ? (
+              <div>
+                <div style={{fontSize: '0.8em'}}>{user.email}</div>
+                <div>
+                  <IconButton onClick={logout}>🚪</IconButton>
+                </div>
+              </div>
+            ) : null}
+          </CenteredRow>
+          <CenteredBox
+            css={{width: 400, marginLeft: 'auto', marginRight: 'auto'}}
+          >
+            {error ? <div>Error: {error}</div> : null}
+            {user ? (
+              <FirebaseData
+                user={user}
+                render={firebaseData => <Lists {...firebaseData} />}
+              />
+            ) : (
+              <LoginForm login={login} signup={signup} />
+            )}
+          </CenteredBox>
+        </div>
+      )}
+    />
+  )
+}
+
+render(<App />, document.getElementById('root'))
