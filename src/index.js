@@ -2,6 +2,7 @@ import 'milligram'
 import React from 'react'
 import {render} from 'react-dom'
 import glamorous from 'glamorous'
+import {Motion, spring} from 'react-motion'
 import firebase from './firebase'
 import {
   Row,
@@ -27,19 +28,19 @@ function Lists({
   return (
     <div style={{width: '100%'}}>
       <CenteredRow>
-        <select
-          value={selectedListId || undefined}
-          onChange={e => onListChange(e.target.value)}
-          style={{flex: 1}}
-        >
-          {lists ? (
-            Object.entries(lists).map(([id, {name}]) => (
+        {Object.keys(lists).length ? (
+          <select
+            value={selectedListId || undefined}
+            onChange={e => onListChange(e.target.value)}
+            style={{flex: 1}}
+          >
+            {Object.entries(lists).map(([id, {name}]) => (
               <option key={id} value={id}>
                 {name}
               </option>
-            ))
-          ) : null}
-        </select>
+            ))}
+          </select>
+        ) : null}
         <SuccessButton
           css={{marginLeft: 20}}
           onClick={() => {
@@ -89,46 +90,57 @@ function Lists({
                 </Button>
               </CenteredRow>
             </form>
-            <div>
+            <div style={{position: 'relative'}}>
               {selectedList && selectedList.items ? (
                 Object.entries(selectedList.items)
                   .sort(([, a], [, b]) => (a.order > b.order ? 1 : -1))
-                  .map(([id, {value}]) => (
-                    <React.Fragment key={id}>
-                      <hr style={{margin: 8}} />
-                      <Row
-                        gap={30}
-                        css={{
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <IconButton>✋</IconButton>
-                        <div style={{flex: 1}}>{value}</div>
-                        <IconButton
-                          onClick={e => {
-                            e.target.blur()
-                            onCompleteItem(id)
+                  .map(([id, {value}], index) => (
+                    <Motion key={id} style={{top: spring(index * 45)}}>
+                      {val => (
+                        <div
+                          style={{
+                            ...val,
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
                           }}
                         >
-                          ✅
-                        </IconButton>
-                        <IconButton
-                          onClick={e => {
-                            e.target.blur()
-                            if (
-                              confirm(
-                                '🚨 Hey! Are you sure you wanna delete that TODO? 🚨',
-                              )
-                            ) {
-                              onDeleteItem(id)
-                            }
-                          }}
-                        >
-                          ❌
-                        </IconButton>
-                      </Row>
-                    </React.Fragment>
+                          <hr style={{margin: 8}} />
+                          <Row
+                            gap={30}
+                            css={{
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            }}
+                          >
+                            {/* TODO: <IconButton>✋</IconButton>*/}
+                            <div style={{flex: 1}}>{value}</div>
+                            <IconButton
+                              onClick={e => {
+                                e.target.blur()
+                                onCompleteItem(id)
+                              }}
+                            >
+                              ✅
+                            </IconButton>
+                            <IconButton
+                              onClick={e => {
+                                e.target.blur()
+                                if (
+                                  confirm(
+                                    '🚨 Hey! Are you sure you wanna delete that TODO? 🚨',
+                                  )
+                                ) {
+                                  onDeleteItem(id)
+                                }
+                              }}
+                            >
+                              ❌
+                            </IconButton>
+                          </Row>
+                        </div>
+                      )}
+                    </Motion>
                   ))
               ) : null}
             </div>
@@ -223,8 +235,14 @@ class FirebaseData extends React.Component {
   }
   componentDidMount() {
     this.unsubscribe = this.getRef().on('value', snapshot => {
-      const lists = snapshot ? snapshot.val() : null
-      const firstItemId = lists ? Object.keys(lists)[0] : null
+      if (!snapshot) {
+        return
+      }
+      const lists = snapshot.val()
+      if (!lists) {
+        return
+      }
+      const firstItemId = Object.keys(lists)[0]
       this.setState(({selectedListId}) => ({
         lists,
         selectedListId: lists[selectedListId] ? selectedListId : firstItemId,
