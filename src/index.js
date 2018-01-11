@@ -18,7 +18,10 @@ function Lists({
   onDeleteItem,
   onDeleteList,
   onCompleteItem,
+<<<<<<< HEAD
   onDragItem,
+=======
+>>>>>>> 2ad2c55299df7ddaa6e791379181c9690a140713
   onListChange
 }) {
   const selectedList = lists[selectedListId];
@@ -78,6 +81,7 @@ function Lists({
               </CenteredRow>
             </form>
             <div style={{ position: "relative" }}>
+<<<<<<< HEAD
               <DragDropContext onDragStart={console.log} onDragEnd={results => onDragItem(results, selectedList)}>
                 <Droppable droppableId={selectedListId}>
                   {(provided, snapshot) => {
@@ -105,6 +109,69 @@ function Lists({
                       </div>
                     );
                   }}
+=======
+              <DragDropContext onDragStart={console.log} onDragEnd={console.log}>
+                <Droppable droppableId={selectedListId}>
+                  {(provided, snapshot) => {
+                    console.log('provided',provided);
+                    console.log('snapshot',snapshot);
+                    return (
+                    <div ref={provided.innerRef}>
+                      {selectedList && selectedList.items
+                        ? Object.entries(selectedList.items)
+                            .sort(([, a], [, b]) => (a.order > b.order ? 1 : -1))
+                            .map(([id, { value }], index) => (
+                              <Draggable key={index} draggableId={index}>
+                                {(provided, snapshot) => (
+                                  <Motion key={id} style={{ top: spring(index * 45) }}>
+                                    {val => (
+                                      <div
+                                        style={{
+                                          ...val,
+                                          position: "absolute",
+                                          left: 0,
+                                          right: 0
+                                        }}
+                                      >
+                                        <hr style={{ margin: 8 }} />
+                                        <Row
+                                          gap={30}
+                                          css={{
+                                            justifyContent: "center",
+                                            alignItems: "center"
+                                          }}
+                                        >
+                                          {/* TODO: <IconButton>✋</IconButton>*/}
+                                          <div style={{ flex: 1 }}>{value}</div>
+                                          <IconButton
+                                            onClick={e => {
+                                              e.target.blur();
+                                              onCompleteItem(id);
+                                            }}
+                                          >
+                                            ✅
+                                          </IconButton>
+                                          <IconButton
+                                            onClick={e => {
+                                              e.target.blur();
+                                              if (confirm("🚨 Hey! Are you sure you wanna delete that TODO? 🚨")) {
+                                                onDeleteItem(id);
+                                              }
+                                            }}
+                                          >
+                                            ❌
+                                          </IconButton>
+                                        </Row>
+                                      </div>
+                                    )}
+                                  </Motion>
+                                )}
+                              </Draggable>
+                            ))
+                        : null}
+                    </div>
+                  )}}
+>>>>>>> 2ad2c55299df7ddaa6e791379181c9690a140713
                 </Droppable>
               </DragDropContext>
             </div>
@@ -295,6 +362,9 @@ class FirebaseData extends React.Component {
     console.log(Object.entries(selectedList.items));
     console.log("STATE", this.state);
     const { items } = this.state.lists[this.state.selectedListId];
+    
+    // Currently manually forcing firebase to move an item by change its order
+    // Needs to update order based on results.destination.id, however that is null...
     Object.entries(selectedList.items).map(([id, ]) => {
       console.log("ID", id);
       if(id === '-L1mj04zkbqynkC7OGHS') {
@@ -303,16 +373,10 @@ class FirebaseData extends React.Component {
         this.getRef(`/${this.state.selectedListId}/items`).set(movedItems);
       }
     });
-    // console.log("items", items);
-    // -L1mj04zkbqynkC7OGHS
-    // const movedItem = items[itemId];
-    // const newItems = reorderItems(items, completeItem, Object.keys(items).length - 1);
-    // this.getRef(`/${this.state.selectedListId}/items`).set(newItems);
-    //   console.log(result);
-
-    // if source.droppableId does not equal destination.droppableId,
-    // then you need to remove the Draggable from the source.droppableId list
-    // and add it into the correct position of the destination.droppableId list.
+  
+    /* Logic for DND: if source.droppableId does not equal destination.droppableId,
+    then you need to remove the Draggable from the source.droppableId list
+     and add it into the correct position of the destination.droppableId list. */
 
     // dropped outside the list
     if (!results.destination) {
@@ -322,18 +386,6 @@ class FirebaseData extends React.Component {
     // if source.droppableId equals destination.droppableId
     // you need to remove the item from your list
     // and insert it at the correct position.
-
-    //   }
-    //   //     const quotes = reorder(
-    //   //       this.state.quotes,
-    //   //       result.source.index,
-    //   //       result.destination.index
-    //   //     );
-
-    //   //     this.setState({
-    //   //       quotes,
-    //   // });
-    // }
   };
   handleListChange = listId => {
     this.setState({ selectedListId: listId });
