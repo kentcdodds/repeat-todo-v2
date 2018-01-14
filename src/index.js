@@ -1,8 +1,13 @@
 import 'milligram'
 import React from 'react'
 import {render} from 'react-dom'
-import glamorous from 'glamorous'
 import {Motion, spring} from 'react-motion'
+import {
+  SortableContainer,
+  SortableElement,
+  SortableHandle,
+  arrayMove,
+} from 'react-sortable-hoc'
 import registerServiceWorker from './register-service-worker'
 import firebase from './firebase'
 import {
@@ -14,6 +19,82 @@ import {
   SuccessButton,
   DangerButton,
 } from './components'
+import './handle.css'
+
+const DragHandle = SortableHandle(({children}) => (
+  <div
+    className="draggable-item"
+    style={{
+      cursor: 'pointer',
+      fontSize: '1.5em',
+    }}
+  >
+    {children}
+  </div>
+))
+
+const SortableItem = SortableElement(
+  ({id, value, sortIndex, onDeleteItem, onCompleteItem, ...rest}) => {
+    return (
+      <Motion key={id} style={{top: spring(sortIndex * 45)}}>
+        {val => (
+          <div className="draggable-item-row">
+            <hr style={{margin: 8}} />
+            <Row
+              gap={30}
+              css={{
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <DragHandle />
+              <div style={{flex: 1}}>{value}</div>
+              <IconButton
+                onClick={e => {
+                  e.target.blur()
+                  onCompleteItem(id)
+                }}
+              >
+                ✅
+              </IconButton>
+              <IconButton
+                onClick={e => {
+                  e.target.blur()
+                  if (
+                    confirm(
+                      '🚨 Hey! Are you sure you wanna delete that TODO? 🚨',
+                    )
+                  ) {
+                    onDeleteItem(id)
+                  }
+                }}
+              >
+                ❌
+              </IconButton>
+            </Row>
+          </div>
+        )}
+      </Motion>
+    )
+  },
+)
+
+const SortableList = SortableContainer(
+  ({items, history, selectedList, ...rest}) => (
+    <div style={{position: 'relative'}}>
+      {selectedList && selectedList.items
+        ? Object.entries(selectedList.items)
+            .sort(([, a], [, b]) => (a.order > b.order ? 1 : -1))
+            .map(([id, {value}], index) => (
+              <SortableItem
+                key={id}
+                {...{id, value, index, sortIndex: index, ...rest}}
+              />
+            ))
+        : null}
+    </div>
+  ),
+)
 
 registerServiceWorker()
 
@@ -26,6 +107,7 @@ function Lists({
   onDeleteList,
   onCompleteItem,
   onListChange,
+  onSortEnd,
 }) {
   const selectedList = lists[selectedListId]
   return (
@@ -93,60 +175,16 @@ function Lists({
                 </Button>
               </CenteredRow>
             </form>
-            <div style={{position: 'relative'}}>
-              {selectedList && selectedList.items ? (
-                Object.entries(selectedList.items)
-                  .sort(([, a], [, b]) => (a.order > b.order ? 1 : -1))
-                  .map(([id, {value}], index) => (
-                    <Motion key={id} style={{top: spring(index * 45)}}>
-                      {val => (
-                        <div
-                          style={{
-                            ...val,
-                            position: 'absolute',
-                            left: 0,
-                            right: 0,
-                          }}
-                        >
-                          <hr style={{margin: 8}} />
-                          <Row
-                            gap={30}
-                            css={{
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                            }}
-                          >
-                            {/* TODO: <IconButton>✋</IconButton>*/}
-                            <div style={{flex: 1}}>{value}</div>
-                            <IconButton
-                              onClick={e => {
-                                e.target.blur()
-                                onCompleteItem(id)
-                              }}
-                            >
-                              ✅
-                            </IconButton>
-                            <IconButton
-                              onClick={e => {
-                                e.target.blur()
-                                if (
-                                  confirm(
-                                    '🚨 Hey! Are you sure you wanna delete that TODO? 🚨',
-                                  )
-                                ) {
-                                  onDeleteItem(id)
-                                }
-                              }}
-                            >
-                              ❌
-                            </IconButton>
-                          </Row>
-                        </div>
-                      )}
-                    </Motion>
-                  ))
-              ) : null}
-            </div>
+            <SortableList
+              lockAxis="y"
+              useDragHandle
+              onSortEnd={onSortEnd}
+              {...{
+                selectedList,
+                onDeleteItem,
+                onCompleteItem,
+              }}
+            />
           </div>
         </React.Fragment>
       ) : null}
@@ -292,6 +330,30 @@ class FirebaseData extends React.Component {
   handleListChange = listId => {
     this.setState({selectedListId: listId})
   }
+
+  handleReorder = ({oldIndex, newIndex}) => {
+    const {items} = this.state.lists[this.state.selectedListId]
+    const sortedItems = Object.entries(items)
+      .sort(([, a], [, b]) => (a.order > b.order ? 1 : -1))
+      .map(([key, item]) => {
+        item.firebaseKey = key
+        return item
+      })
+
+    const newItems = arrayMove(sortedItems, oldIndex, newIndex)
+
+    const restoredOb = newItems.reduce((ob, item, i) => {
+      const {firebaseKey, ...rest} = item
+      ob[firebaseKey] = {
+        ...rest,
+        order: i,
+      }
+      return ob
+    }, {})
+
+    this.getRef(`/${this.state.selectedListId}/items`).set(restoredOb)
+  }
+
   render() {
     return this.props.render({
       ...this.state,
@@ -301,6 +363,7 @@ class FirebaseData extends React.Component {
       onDeleteItem: this.handleDeleteItem,
       onListChange: this.handleListChange,
       onCompleteItem: this.handleCompleteItem,
+      onSortEnd: this.handleReorder,
     })
   }
 }
