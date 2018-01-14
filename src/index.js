@@ -38,7 +38,15 @@ const SortableItem = SortableElement(
     return (
       <Motion key={id} style={{top: spring(sortIndex * 45)}}>
         {val => (
-          <div className="draggable-item-row">
+          <div
+            className="draggable-item-row"
+            style={{
+              ...val,
+              position: 'absolute',
+              left: 0,
+              right: 0,
+            }}
+          >
             <hr style={{margin: 8}} />
             <Row
               gap={30}
