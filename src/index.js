@@ -1,8 +1,9 @@
 import 'milligram'
 import React from 'react'
-import {render} from 'react-dom'
+import { render } from 'react-dom'
 import glamorous from 'glamorous'
-import {Motion, spring} from 'react-motion'
+import { Motion, spring } from 'react-motion'
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
 import registerServiceWorker from './register-service-worker'
 import firebase from './firebase'
 import {
@@ -25,19 +26,20 @@ function Lists({
   onDeleteItem,
   onDeleteList,
   onCompleteItem,
+  onDragItem,
   onListChange,
 }) {
   const selectedList = lists[selectedListId]
   return (
-    <div style={{width: '100%'}}>
+    <div style={{ width: '100%' }}>
       <CenteredRow>
         {Object.keys(lists).length ? (
           <select
             value={selectedListId || undefined}
             onChange={e => onListChange(e.target.value)}
-            style={{flex: 1}}
+            style={{ flex: 1 }}
           >
-            {Object.entries(lists).map(([id, {name}]) => (
+            {Object.entries(lists).map(([id, { name }]) => (
               <option key={id} value={id}>
                 {name}
               </option>
@@ -45,7 +47,7 @@ function Lists({
           </select>
         ) : null}
         <SuccessButton
-          css={{marginLeft: 20}}
+          css={{ marginLeft: 20 }}
           onClick={() => {
             const result = prompt(
               'Hi friend! 👋 So, what is the name of your new list?',
@@ -60,10 +62,10 @@ function Lists({
       </CenteredRow>
       {selectedList ? (
         <React.Fragment>
-          <hr style={{width: '100%'}} />
-          <div style={{width: '100%'}}>
-            <CenteredRow css={{justifyContent: 'flex-start'}}>
-              <h2 style={{flex: 1}}>{selectedList.name}</h2>
+          <hr style={{ width: '100%' }} />
+          <div style={{ width: '100%' }}>
+            <CenteredRow css={{ justifyContent: 'flex-start' }}>
+              <h2 style={{ flex: 1 }}>{selectedList.name}</h2>
               <DangerButton
                 onClick={() => {
                   if (
@@ -87,65 +89,49 @@ function Lists({
               }}
             >
               <CenteredRow>
-                <input type="text" name="value" style={{flex: 1}} />
-                <Button type="submit" css={{marginLeft: 20}}>
+                <input type="text" name="value" style={{ flex: 1 }} />
+                <Button type="submit" css={{ marginLeft: 20 }}>
                   Add
                 </Button>
               </CenteredRow>
             </form>
-            <div style={{position: 'relative'}}>
-              {selectedList && selectedList.items ? (
-                Object.entries(selectedList.items)
-                  .sort(([, a], [, b]) => (a.order > b.order ? 1 : -1))
-                  .map(([id, {value}], index) => (
-                    <Motion key={id} style={{top: spring(index * 45)}}>
-                      {val => (
-                        <div
-                          style={{
-                            ...val,
-                            position: 'absolute',
-                            left: 0,
-                            right: 0,
-                          }}
-                        >
-                          <hr style={{margin: 8}} />
-                          <Row
-                            gap={30}
-                            css={{
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                            }}
-                          >
-                            {/* TODO: <IconButton>✋</IconButton>*/}
-                            <div style={{flex: 1}}>{value}</div>
-                            <IconButton
-                              onClick={e => {
-                                e.target.blur()
-                                onCompleteItem(id)
-                              }}
-                            >
-                              ✅
-                            </IconButton>
-                            <IconButton
-                              onClick={e => {
-                                e.target.blur()
-                                if (
-                                  confirm(
-                                    '🚨 Hey! Are you sure you wanna delete that TODO? 🚨',
-                                  )
-                                ) {
-                                  onDeleteItem(id)
-                                }
-                              }}
-                            >
-                              ❌
-                            </IconButton>
-                          </Row>
-                        </div>
-                      )}
-                    </Motion>
-                  ))
-              ) : null}
+            <div style={{ position: 'relative' }}>
+              <DragDropContext
+                onDragStart={console.log}
+                onDragEnd={results => onDragItem(results, selectedList)}
+              >
+                <Droppable droppableId={selectedListId}>
+                  {(provided, snapshot) => {
+                    return (
+                      <div ref={provided.innerRef}>
+                        {selectedList && selectedList.items
+                          ? Object.entries(selectedList.items)
+                            .sort(
+                            ([, a], [, b]) => (a.order > b.order ? 1 : -1),
+                          )
+                            .map(([id, { value }], index) => (
+                              <Draggable key={`${id}`} draggableId={`${id}`} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    style={provided.draggableStyle}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                  >
+                                    {/*Temporarily extracted extraneous details for easy testing*/}
+                                    {id}
+                                    {provided.placeholder}
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))
+                          : null}
+                        {provided.placeholder}
+                      </div>
+                    )
+                  }}
+                </Droppable>
+              </DragDropContext>
             </div>
           </div>
         </React.Fragment>
@@ -154,17 +140,61 @@ function Lists({
   )
 }
 
+// The extracted list item component, Note: Re-add {/* TODO: <IconButton>✋</IconButton>*/}
+/* { <Motion key={id} style={{ top: spring(index * 45) }}>
+                                        {val => (
+                                          <div
+                                            style={{
+                                              ...val,
+                                              position: "absolute",
+                                              left: 0,
+                                              right: 0
+                                            }}
+                                          >
+                                            <hr style={{ margin: 8 }} />
+                                            <Row
+                                              gap={30}
+                                              css={{
+                                                justifyContent: "center",
+                                                alignItems: "center"
+                                              }}
+                                            >
+                                              /* TODO: <IconButton>✋</IconButton>*/
+/* <div style={{ flex: 1 }}>{value}</div>
+                                              <IconButton
+                                                onClick={e => {
+                                                  e.target.blur();
+                                                  onCompleteItem(id);
+                                                }}
+                                              >
+                                                ✅
+                                              </IconButton>
+                                              <IconButton
+                                                onClick={e => {
+                                                  e.target.blur();
+                                                  if (confirm("🚨 Hey! Are you sure you wanna delete that TODO? 🚨")) {
+                                                    onDeleteItem(id);
+                                                  }
+                                                }}
+                                              >
+                                                ❌
+                                              </IconButton>
+                                            </Row>
+                                          </div>
+                                        )}
+                                      </Motion> } */
+
 class Login extends React.Component {
-  state = {user: null, error: null}
+  state = { user: null, error: null }
   auth = firebase.auth()
-  login = ({email, password}) => {
+  login = ({ email, password }) => {
     this.auth.signInWithEmailAndPassword(email, password).catch(error => {
-      this.setState({error: error.message})
+      this.setState({ error: error.message })
     })
   }
-  signup = ({email, password}) => {
+  signup = ({ email, password }) => {
     this.auth.createUserWithEmailAndPassword(email, password).catch(error => {
-      this.setState({error: error.message})
+      this.setState({ error: error.message })
     })
   }
   logout = () => {
@@ -172,7 +202,7 @@ class Login extends React.Component {
   }
   componentDidMount() {
     this.unsubscribe = this.auth.onAuthStateChanged(user => {
-      this.setState({user, error: null})
+      this.setState({ user, error: null })
     })
   }
   componentWillUnmount() {
@@ -218,7 +248,7 @@ class LoginForm extends React.Component {
             Password: <input type="password" name="password" />
           </label>
         </CenteredRow>
-        <CenteredRow css={{justifyContent: 'space-between'}}>
+        <CenteredRow css={{ justifyContent: 'space-between' }}>
           <Button type="submit">Sign In</Button>
           <SuccessButton onClick={this.handleSignup}>Sign Up</SuccessButton>
         </CenteredRow>
@@ -246,7 +276,7 @@ class FirebaseData extends React.Component {
         return
       }
       const firstItemId = Object.keys(lists)[0]
-      this.setState(({selectedListId}) => ({
+      this.setState(({ selectedListId }) => ({
         lists,
         selectedListId: lists[selectedListId] ? selectedListId : firstItemId,
       }))
@@ -267,20 +297,20 @@ class FirebaseData extends React.Component {
     this.getRef(`/${listId}`).remove()
   }
   handleCreateItem = value => {
-    const {items} = this.state.lists[this.state.selectedListId]
-    const {key} = this.getRef(`/${this.state.selectedListId}/items`).push()
-    const newItem = {value, order: -2}
-    const newItems = reorderItems({...items, [key]: newItem}, newItem, -2)
+    const { items } = this.state.lists[this.state.selectedListId]
+    const { key } = this.getRef(`/${this.state.selectedListId}/items`).push()
+    const newItem = { value, order: -2 }
+    const newItems = reorderItems({ ...items, [key]: newItem }, newItem, -2)
     this.getRef(`/${this.state.selectedListId}/items`).set(newItems)
   }
   handleDeleteItem = itemId => {
-    const {items} = this.state.lists[this.state.selectedListId]
+    const { items } = this.state.lists[this.state.selectedListId]
     const itemToRemove = items[itemId]
     const newItems = reorderItems(items, itemToRemove)
     this.getRef(`/${this.state.selectedListId}/items`).set(newItems)
   }
   handleCompleteItem = itemId => {
-    const {items} = this.state.lists[this.state.selectedListId]
+    const { items } = this.state.lists[this.state.selectedListId]
     const completeItem = items[itemId]
     const newItems = reorderItems(
       items,
@@ -289,8 +319,40 @@ class FirebaseData extends React.Component {
     )
     this.getRef(`/${this.state.selectedListId}/items`).set(newItems)
   }
+  handleDragItem = (results, selectedList) => {
+    console.log('RESULTS', results)
+    const { items } = this.state.lists[this.state.selectedListId]
+
+    // Currently manually forcing firebase to move an item by change its order
+    // Needs to update order based on results.destination.id, however that is null...
+    Object.entries(selectedList.items).map(([id]) => {
+      console.log('ID', id)
+      if (id === '-L1mj04zkbqynkC7OGHS') {
+        const movedItem = items[id]
+        const movedItems = reorderItems(items, movedItem, 2)
+        this.getRef(`/${this.state.selectedListId}/items`).set(movedItems)
+      }
+    })
+
+    /* Logic for Beautiful Drag and Drop: 
+    if source.droppableId does not equal destination.droppableId,
+    then you need to remove the Draggable from the source.droppableId list
+    and add it into the correct position of the destination.droppableId list. 
+    */
+
+    // dropped outside the list
+    if (!results.destination) {
+      return
+    }
+
+    /* 
+    if source.droppableId equals destination.droppableId
+    you need to remove the item from your list
+    and insert it at the correct position. 
+    */
+  }
   handleListChange = listId => {
-    this.setState({selectedListId: listId})
+    this.setState({ selectedListId: listId })
   }
   render() {
     return this.props.render({
@@ -299,6 +361,7 @@ class FirebaseData extends React.Component {
       onDeleteList: this.handleDeleteList,
       onCreateItem: this.handleCreateItem,
       onDeleteItem: this.handleDeleteItem,
+      onDragItem: this.handleDragItem,
       onListChange: this.handleListChange,
       onCompleteItem: this.handleCompleteItem,
     })
@@ -331,7 +394,7 @@ function reorderItems(items, itemToMove, locationToMove) {
         ...item,
         order,
       }
-      console.log({all})
+      console.log({ all })
       return all
     }, {})
 }
@@ -339,7 +402,7 @@ function reorderItems(items, itemToMove, locationToMove) {
 function App() {
   return (
     <Login
-      render={({user, login, signup, error, logout}) => (
+      render={({ user, login, signup, error, logout }) => (
         <div>
           <CenteredRow
             gap={10}
@@ -350,10 +413,10 @@ function App() {
               alignItems: 'center',
             }}
           >
-            <h1 style={{marginBottom: 0}}>Repeat todo</h1>
+            <h1 style={{ marginBottom: 0 }}>Repeat todo</h1>
             {user ? (
               <div>
-                <div style={{fontSize: '0.8em'}}>{user.email}</div>
+                <div style={{ fontSize: '0.8em' }}>{user.email}</div>
                 <div>
                   <IconButton onClick={logout}>🚪</IconButton>
                 </div>
@@ -361,7 +424,7 @@ function App() {
             ) : null}
           </CenteredRow>
           <CenteredBox
-            css={{width: 400, marginLeft: 'auto', marginRight: 'auto'}}
+            css={{ width: 400, marginLeft: 'auto', marginRight: 'auto' }}
           >
             {error ? <div>Error: {error}</div> : null}
             {user ? (
@@ -370,8 +433,8 @@ function App() {
                 render={firebaseData => <Lists {...firebaseData} />}
               />
             ) : (
-              <LoginForm login={login} signup={signup} />
-            )}
+                <LoginForm login={login} signup={signup} />
+              )}
           </CenteredBox>
         </div>
       )}
