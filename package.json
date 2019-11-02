@@ -3,7 +3,7 @@
   "description": "V2 of https://github.com/kentcdodds/repeat-todo",
   "version": "0.0.66",
   "dependencies": {
-    "react-dom": "16.2.0",
+    "react-dom": "16.11.0",
     "react-beautiful-dnd": "3.0.0",
     "react": "16.2.0",
     "prop-types": "15.6.0",
