@@ -1,0 +1,6 @@
+body > .draggable-item-row .draggable-item::after {
+  content: '✊';
+}
+.draggable-item-row .draggable-item::after {
+  content: '✋';
+}
